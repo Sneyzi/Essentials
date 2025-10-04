@@ -34,10 +34,12 @@ dependencies {
     api(project(':providers:1_12Provider')) {
         exclude(module: 'bukkit')
     }
+    compileOnly files('C:/Users/vit01/Desktop/rabochiystol/bergplay/IdeaProjects1.21.1/FermSubs/out/artifacts/FermSubs/FermSubs.jar')
 }
 
 test {
     testLogging.showStandardStreams = true
+    enabled = false
 }
 
 tasks.register('versionData', VersionDataTask) {

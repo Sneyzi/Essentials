@@ -71,6 +71,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import ua.sneyzi.fermsubs.api.SubsAPI;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -98,6 +99,14 @@ public class EssentialsPlayerListener implements Listener {
 
     public EssentialsPlayerListener(final IEssentials parent) {
         this.ess = parent;
+    }
+
+    private boolean canFly(Player player, User user) {
+        return user.isAuthorized("essentials.fly") || SubsAPI.hasSubscription(player, "fly");
+    }
+
+    private boolean canGod(Player player, User user) {
+        return user.isAuthorized("essentials.god") || SubsAPI.hasSubscription(player, "god");
     }
 
     private static boolean isEntityPickupEvent() {
@@ -485,7 +494,7 @@ public class EssentialsPlayerListener implements Listener {
             });
         }
 
-        if (user.isAuthorized("essentials.fly.safelogin")) {
+        if (user.isAuthorized("essentials.fly.safelogin") || SubsAPI.hasSubscription(user.getBase(), "fly")) {
             user.getBase().setFallDistance(0);
             if (LocationUtil.shouldFly(ess, user.getLocation())) {
                 user.getBase().setAllowFlight(true);
@@ -506,7 +515,7 @@ public class EssentialsPlayerListener implements Listener {
             ess.getLogger().log(Level.INFO, "Set socialspy to false for {0} because they had it enabled without permission.", user.getName());
         }
 
-        if (user.isGodModeEnabled() && !user.isAuthorized("essentials.god")) {
+        if (user.isGodModeEnabled() && !canGod(user.getBase(), user)) {
             user.setGodModeEnabled(false);
             ess.getLogger().log(Level.INFO, "Set god mode to false for {0} because they had it enabled without permission.", user.getName());
         }
@@ -694,7 +703,7 @@ public class EssentialsPlayerListener implements Listener {
         // Mitigation for https://github.com/EssentialsX/Essentials/issues/4325
         final TickCountProvider tickCountProvider = ess.provider(TickCountProvider.class);
         if (tickCountProvider != null && ess.getSettings().isWorldChangePreserveFlying() && VersionUtil.getServerBukkitVersion().isHigherThanOrEqualTo(VersionUtil.v1_17_R01)) {
-            if (user.isAuthorized("essentials.fly")) {
+            if (canFly(player, user)) {
                 //noinspection DataFlowIssue - not real
                 if (event.getFrom().getWorld() != event.getTo().getWorld() && player.getAllowFlight()) {
                     // If the player is not flying but has the ability to fly, we set the sign of the tick count to -1
@@ -859,7 +868,7 @@ public class EssentialsPlayerListener implements Listener {
         if (ess.getSettings().isWorldChangeFlyResetEnabled()) {
             if (user.getBase().getGameMode() != GameMode.CREATIVE
                 && user.getBase().getGameMode() != GameMode.SPECTATOR
-                && !user.isAuthorized("essentials.fly")) {
+                && !canFly(event.getPlayer(), user)) {
                 user.getBase().setFallDistance(0f);
                 user.getBase().setAllowFlight(false);
             }
@@ -884,7 +893,7 @@ public class EssentialsPlayerListener implements Listener {
 
         final TickCountProvider tickCountProvider = ess.provider(TickCountProvider.class);
         final int flightTick = user.getFlightTick();
-        if (tickCountProvider != null && Math.abs(flightTick) == tickCountProvider.getTickCount() && user.isAuthorized("essentials.fly")) {
+        if (tickCountProvider != null && Math.abs(flightTick) == tickCountProvider.getTickCount() && canFly(event.getPlayer(), user)) {
             user.getBase().setAllowFlight(true);
             if (flightTick > 0) {
                 user.getBase().setFlying(true);
@@ -1153,12 +1162,12 @@ public class EssentialsPlayerListener implements Listener {
         }
 
         final User user = ess.getUser(event.getPlayer());
-        if (!user.isAuthorized("essentials.fly")) {
+        if (!canFly(event.getPlayer(), user)) {
             return;
         }
 
         final Player player = event.getPlayer();
-        if (player.isFlying() && player.getAllowFlight() && user.isAuthorized("essentials.fly")) {
+        if (player.isFlying() && player.getAllowFlight() && canFly(player, user)) {
             // The gamemode change happens after the event, so we need to delay the flight enable
             ess.scheduleSyncDelayedTask(() -> {
                 player.setAllowFlight(true);
